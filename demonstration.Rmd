@@ -41,7 +41,7 @@ tbl(con, 'genres')
 
 Easily filter data:
 ```{r}
-tbl(con, 'genres') %>% filter(Name == 'Jazz')
+tbl(con, 'genres') %>% filter(Name == 'Jazz') %>% show_query()
 ```
 
 

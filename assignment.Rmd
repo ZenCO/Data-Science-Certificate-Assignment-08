@@ -15,26 +15,36 @@ library("DBI")
 
 Connect to `chinook.db`
 ```{r}
-#
+chasecon <-DBI::dbConnect(RSQLite::SQLite(), "chinook.db")
 ```
 
 
 Create variables to represent the tables: `genres, albums, artists, tracks, invoices, customers, media_types`. This will make it easier to use these tables later on.
 ```{r}
-#
+genres = tbl(con, 'genres')
+albums = tbl(con, 'albums')
+artists = tbl(con, 'artists')
+tracks = tbl(con, 'tracks')
+invoices = tbl(con, 'invoices')
+customers = tbl(con, 'customers')
+media_types = tbl(con, 'media_types')
 ```
 
 
 Who are the first 10 `customers` in the database? Return only `FirstName` and `LastName`
 Answer using SQL and `dbGetQuery()` (not `tbl()`)
 ```{r}
-#
+qry = 'SELECT FirstName, LastName FROM customers LIMIT 10'
+dbGetQuery(con, qry)
+
 ```
 
 
 Complete the same task as above using `tbl()`
 ```{r}
-
+customers %>%
+  filter(CustomerId <=10) %>%
+  select(FirstName, LastName)
 ```
 
 
@@ -43,19 +53,38 @@ For the rest of the assignment, use the `tbl()` ... you may use raw SQL if it is
 
 Count the number of `customers` by `country` and arrange in descending order.
 ```{r}
-#
+customers %>%
+  group_by(Country) %>%
+  summarize(n = n())%>%
+  arrange(desc(n))
+
+  
+```
+
+
+```{r}
+invoices
 ```
 
 
 Plot the sum of `Total` from invoices by year in a line chart.
 ```{r}
-#
+invoiceplot <-invoices %>%
+  mutate(year = substr(InvoiceDate, 1, 4)) %>%
+  group_by(year) %>%
+  geom_line()
+
+```
+
+```{r}
+
+
 ```
 
 
 What's the average length of a `track` for each `artist` on each `album`?
 ```{r}
-#
+invoices
 ```
 
 
