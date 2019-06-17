@@ -15,7 +15,7 @@ library("DBI")
 
 Connect to `chinook.db`
 ```{r}
-chasecon <-DBI::dbConnect(RSQLite::SQLite(), "chinook.db")
+con <-DBI::dbConnect(RSQLite::SQLite(), "chinook.db")
 ```
 
 
@@ -42,9 +42,11 @@ dbGetQuery(con, qry)
 
 Complete the same task as above using `tbl()`
 ```{r}
-customers %>%
-  filter(CustomerId <=10) %>%
-  select(FirstName, LastName)
+
+tbl(con, 'customers') %>%
+  select(FirstName, LastName) %>%
+  head(10)
+
 ```
 
 
@@ -69,23 +71,81 @@ invoices
 
 Plot the sum of `Total` from invoices by year in a line chart.
 ```{r}
-invoiceplot <-invoices %>%
+invoiceplot <- invoices %>%
   mutate(year = substr(InvoiceDate, 1, 4)) %>%
   group_by(year) %>%
-  geom_line()
+  summarise(yeartotal=sum(Total))
+
+invoiceplot
+
+
+```
+
+
+```{r}
+  ggplot(invoiceplot, mapping = aes(x=year, y= yeartotal)) +
+    geom_point()+
+    geom_line()
+```
+
+
+
+```{r}
+
+albums
 
 ```
 
 ```{r}
+genres = tbl(con, 'genres') %>% as_data_frame()
+albums = tbl(con, 'albums') %>% as_data_frame()
+artists = tbl(con, 'artists') %>% as_data_frame()
+tracks = tbl(con, 'tracks') %>% as_data_frame()
+invoices = tbl(con, 'invoices') %>% as_data_frame()
+customers = tbl(con, 'customers') %>% as_data_frame()
+media_types = tbl(con, 'media_types') %>% as_data_frame()
+invoice_items = tbl(con, 'invoice_items') %>% as_data_frame()
 
 
 ```
+
+
+```{r}
+
+```
+
 
 
 What's the average length of a `track` for each `artist` on each `album`?
 ```{r}
-invoices
+
+
+trackdata <- tracks %>%
+ select(TrackName = Name, AlbumId, Milliseconds, Bytes, UnitPrice)
+
+trackdata <-
+  left_join(trackdata, albums, by = c("AlbumId" = "AlbumId")) %>%
+  select(TrackName, AlbumTitle = Title, ArtistId, Milliseconds, Bytes, UnitPrice)
+
+trackdata <-
+  left_join(trackdata, artists, by = c("ArtistId" = "ArtistId")) %>%
+  select(TrackName, AlbumTitle, ArtistName = Name, Milliseconds, Bytes, UnitPrice) %>%
+  mutate(ArtistAlbum = paste(ArtistName, AlbumTitle)) %>%
+  arrange(desc(ArtistAlbum))
+
+trackdata
+
+
 ```
+
+```{r}
+trackmean <- trackdata %>%
+  group_by(ArtistAlbum) %>%                          
+  summarise(mean_mil = mean(Milliseconds))
+
+trackmean
+```
+
 
 
 
@@ -100,36 +160,78 @@ COSTS:
   - Purchased AAC = $0.08
   
 ```{r}
-#
+media_types <- media_types %>%
+  mutate(cost= c(.15, .10, .25, .08, .03))
+media_types
+invoice_items
+```
+  
+  
+```{r}
+incomedata <- invoice_items %>%
+  select(TrackId, Quantity)
+
+
+incomedata <-    left_join(incomedata, tracks, by = c("TrackId" = "TrackId")) %>%
+select(TrackId, UnitPrice, Quantity, TrackName = Name, MediaTypeId, Milliseconds, Bytes, UnitPrice)
+
+
+trackincome <-    left_join(incomedata, media_types, by = c("MediaTypeId" = "MediaTypeId")) %>%
+select(TrackId, UnitPrice, Quantity, TrackName, MediaTypeId, Milliseconds, Bytes, UnitPrice, cost) %>%
+  mutate(income = UnitPrice - cost) %>%
+  group_by(TrackId) %>%
+  summarise(tot_income = sum(income)) %>%
+  arrange(desc(tot_income))
+
+incomedata <- left_join(incomedata, trackincome, by = c("TrackId" = "TrackId")) %>%
+  arrange(desc(tot_income)) %>%
+  top_n(10)
+
+incomedata
+
+
+
 ```
 
 
 Create a Scatter Plot of `tracks`, x = milliseconds and y = bytes 
 ```{r}
-
+tracks %>%
+  ggplot(aes(x = Milliseconds, y = Bytes))+
+  geom_jitter()
 ```
 
 
 Create a Scatter Plot of `tracks`, x = milliseconds and y = bytes, `facet_wrap` by `media_type`
 ```{r}
-
+tracks %>%
+  ggplot(aes(x = Milliseconds, y = Bytes))+
+  geom_jitter()+
+  facet_wrap(~MediaTypeId)
 ```
 
 
 Create a linear regression model using `milliseconds` as a predictor of `bytes`. Hint, formula: `bytes ~ milliseconds`
 ```{r}
-
+  model_1 = lm(Bytes ~ Milliseconds, data=trackdata)
+summary(model_1)
 ```
 
 
 Create a linear model using the same formula but split it out according to `media_type`
 ```{r}
-
+model_2 = lm(Bytes ~ MediaTypeId, data=tracks)
+summary(model_2)
 ```
 
 
 Create a linear model using the same formula but split it out according to `artist`
-```{r}
 
+## I JUST POOPED OUT.  I know that I need to do a left join with tracks to albums to artists.  But I don't know if 
+
+
+```{r}
+model_3 = lm(Bytes ~ ArtistName, data=trackdata)
+summary(model_3)
 ```
 
